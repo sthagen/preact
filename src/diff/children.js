@@ -12,7 +12,7 @@ import { getDomSibling } from '../component';
  * node whose children should be diff'ed against oldParentVNode
  * @param {import('../internal').VNode} oldParentVNode The old virtual
  * node whose children should be diff'ed against newParentVNode
- * @param {object} context The current context object
+ * @param {object} globalContext The current context object - modified by getChildContext
  * @param {boolean} isSvg Whether or not this DOM node is an SVG node
  * @param {Array<import('../internal').PreactElement>} excessDomChildren
  * @param {Array<import('../internal').Component>} commitQueue List of components
@@ -27,7 +27,7 @@ export function diffChildren(
 	parentDom,
 	newParentVNode,
 	oldParentVNode,
-	context,
+	globalContext,
 	isSvg,
 	excessDomChildren,
 	commitQueue,
@@ -103,7 +103,7 @@ export function diffChildren(
 					parentDom,
 					childVNode,
 					oldVNode,
-					context,
+					globalContext,
 					isSvg,
 					excessDomChildren,
 					commitQueue,
@@ -216,7 +216,7 @@ export function diffChildren(
 	newParentVNode._dom = firstChildDom;
 
 	// Remove children that are not part of any vnode.
-	if (excessDomChildren != null && typeof newParentVNode.type !== 'function') {
+	if (excessDomChildren != null && typeof newParentVNode.type != 'function') {
 		for (i = excessDomChildren.length; i--; ) {
 			if (excessDomChildren[i] != null) removeNode(excessDomChildren[i]);
 		}
@@ -247,7 +247,7 @@ export function diffChildren(
 export function toChildArray(children, callback, flattened) {
 	if (flattened == null) flattened = [];
 
-	if (children == null || typeof children === 'boolean') {
+	if (children == null || typeof children == 'boolean') {
 		if (callback) flattened.push(callback(null));
 	} else if (Array.isArray(children)) {
 		for (let i = 0; i < children.length; i++) {
@@ -255,7 +255,7 @@ export function toChildArray(children, callback, flattened) {
 		}
 	} else if (!callback) {
 		flattened.push(children);
-	} else if (typeof children === 'string' || typeof children === 'number') {
+	} else if (typeof children == 'string' || typeof children == 'number') {
 		flattened.push(callback(createVNode(null, children, null, null)));
 	} else if (children._dom != null || children._component != null) {
 		flattened.push(
