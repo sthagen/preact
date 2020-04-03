@@ -26,7 +26,6 @@ export interface ComponentHooks {
 	_list: HookState[];
 	/** List of Effects to be invoked after the next frame is rendered */
 	_pendingEffects: EffectHookState[];
-	_type: number;
 }
 
 export interface Component extends PreactComponent<any, any> {
@@ -42,18 +41,15 @@ export interface EffectHookState {
 	_value?: Effect;
 	_args?: any[];
 	_cleanup?: Cleanup;
-	_type: number;
 }
 
 export interface MemoHookState {
 	_value?: any;
 	_args?: any[];
 	_factory?: () => any;
-	_type: number;
 }
 
 export interface ReducerHookState {
 	_value?: any;
 	_component?: Component;
-	_type: number;
 }
