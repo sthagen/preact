@@ -6,6 +6,9 @@ let currentIndex;
 /** @type {import('./internal').Component} */
 let currentComponent;
 
+/** @type {number} */
+let currentHook = 0;
+
 /** @type {Array<import('./internal').Component>} */
 let afterPaintEffects = [];
 
@@ -93,7 +96,11 @@ function getHookState(index) {
 	// * https://codesandbox.io/s/mnox05qp8
 	const hooks =
 		currentComponent.__hooks ||
-		(currentComponent.__hooks = { _list: [], _pendingEffects: [] });
+		(currentComponent.__hooks = {
+			_list: [],
+			_pendingEffects: [],
+			_type: currentHook
+		});
 
 	if (index >= hooks._list.length) {
 		hooks._list.push({});
@@ -105,6 +112,7 @@ function getHookState(index) {
  * @param {import('./index').StateUpdater<any>} initialState
  */
 export function useState(initialState) {
+	currentHook = 1;
 	return useReducer(invokeOrReturn, initialState);
 }
 
@@ -115,6 +123,8 @@ export function useState(initialState) {
  * @returns {[ any, (state: any) => void ]}
  */
 export function useReducer(reducer, initialState, init) {
+	if (!currentHook) currentHook = 2;
+
 	/** @type {import('./internal').ReducerHookState} */
 	const hookState = getHookState(currentIndex++);
 	if (!hookState._component) {
@@ -141,6 +151,8 @@ export function useReducer(reducer, initialState, init) {
  * @param {any[]} args
  */
 export function useEffect(callback, args) {
+	currentHook = 3;
+
 	/** @type {import('./internal').EffectHookState} */
 	const state = getHookState(currentIndex++);
 	if (argsChanged(state._args, args)) {
@@ -156,6 +168,8 @@ export function useEffect(callback, args) {
  * @param {any[]} args
  */
 export function useLayoutEffect(callback, args) {
+	currentHook = 4;
+
 	/** @type {import('./internal').EffectHookState} */
 	const state = getHookState(currentIndex++);
 	if (argsChanged(state._args, args)) {
@@ -167,6 +181,7 @@ export function useLayoutEffect(callback, args) {
 }
 
 export function useRef(initialValue) {
+	currentHook = 5;
 	return useMemo(() => ({ current: initialValue }), []);
 }
 
@@ -176,6 +191,7 @@ export function useRef(initialValue) {
  * @param {any[]} args
  */
 export function useImperativeHandle(ref, createHandle, args) {
+	if (!currentHook) currentHook = 6;
 	useLayoutEffect(
 		() => {
 			if (typeof ref == 'function') ref(createHandle());
@@ -190,6 +206,8 @@ export function useImperativeHandle(ref, createHandle, args) {
  * @param {any[]} args
  */
 export function useMemo(factory, args) {
+	currentHook = 7;
+
 	/** @type {import('./internal').MemoHookState} */
 	const state = getHookState(currentIndex++);
 	if (argsChanged(state._args, args)) {
@@ -206,6 +224,7 @@ export function useMemo(factory, args) {
  * @param {any[]} args
  */
 export function useCallback(callback, args) {
+	if (!currentHook) currentHook = 8;
 	return useMemo(() => callback, args);
 }
 
@@ -213,6 +232,7 @@ export function useCallback(callback, args) {
  * @param {import('./internal').PreactContext} context
  */
 export function useContext(context) {
+	currentHook = 9;
 	const provider = currentComponent.context[context._id];
 	if (!provider) return context._defaultValue;
 	const state = getHookState(currentIndex++);
@@ -235,6 +255,7 @@ export function useDebugValue(value, formatter) {
 }
 
 export function useErrorBoundary(cb) {
+	currentHook = 10;
 	const state = getHookState(currentIndex++);
 	const errState = useState();
 	state._value = cb;
