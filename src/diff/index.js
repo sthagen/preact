@@ -70,7 +70,7 @@ export function diff(
 					c.constructor = newType;
 					c.render = doRender;
 				}
-				if (provider) provider.sub(c);
+				if (provider) provider.sub(c, newProps.update);
 
 				c.props = newProps;
 				if (!c.state) c.state = {};
@@ -365,8 +365,7 @@ function diffElementNodes(
 		// If the new vnode didn't have dangerouslySetInnerHTML, diff its children
 		if (newHtml) {
 			newVNode._children = [];
-		}
-		else {
+		} else {
 			newVNode._children = newVNode.props.children;
 			diffChildren(
 				dom,
