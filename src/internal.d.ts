@@ -14,6 +14,8 @@ export interface Options extends preact.Options {
 	_render?(vnode: VNode): void;
 	/** Attach a hook that is invoked before a hook's state is queried. */
 	_hook?(component: Component): void;
+	/** Bypass hook effect execution. Currenty used in devtools */
+	_skipHooks?: boolean;
 	/** Attach a hook that is invoked after an error is caught in a component but before calling lifecycle hooks */
 	_catchError(error: any, vnode: VNode, oldVNode: VNode | undefined): void;
 }

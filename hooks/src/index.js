@@ -89,7 +89,7 @@ options.unmount = vnode => {
  * @returns {import('./internal').HookState}
  */
 function getHookState(index, type) {
-	if (options._hook) options._hook(currentComponent, type);
+	if (options._hook) options._hook(currentComponent, index, type);
 	// Largely inspired by:
 	// * https://github.com/michael-klein/funcy.js/blob/f6be73468e6ec46b0ff5aa3cc4c9baf72a29025a/src/hooks/core_hooks.mjs
 	// * https://github.com/michael-klein/funcy.js/blob/650beaa58c43c33a74820a3c98b3c7079cf2e333/src/renderer.mjs
@@ -152,7 +152,7 @@ export function useReducer(reducer, initialState, init) {
 export function useEffect(callback, args) {
 	/** @type {import('./internal').EffectHookState} */
 	const state = getHookState(currentIndex++, 3);
-	if (argsChanged(state._args, args)) {
+	if (!options._skipHooks && argsChanged(state._args, args)) {
 		state._value = callback;
 		state._args = args;
 
@@ -167,7 +167,7 @@ export function useEffect(callback, args) {
 export function useLayoutEffect(callback, args) {
 	/** @type {import('./internal').EffectHookState} */
 	const state = getHookState(currentIndex++, 4);
-	if (argsChanged(state._args, args)) {
+	if (!options._skipHooks && argsChanged(state._args, args)) {
 		state._value = callback;
 		state._args = args;
 
