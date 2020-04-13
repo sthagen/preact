@@ -5,8 +5,8 @@ import {
 	hookSpy
 } from '../../../test/_util/optionSpies';
 
-import { setupRerender } from 'preact/test-utils';
-import { createElement, render, createContext } from 'preact';
+import { setupRerender, act } from 'preact/test-utils';
+import { createElement, render, createContext, options } from 'preact';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
 import {
 	useState,
@@ -125,5 +125,23 @@ describe('hook options', () => {
 			// Belongs to useErrorBoundary that uses multiple native hooks.
 			[10, USE_STATE]
 		]);
+	});
+
+	it('should skip effect hooks', () => {
+		options._skipHooks = true;
+		const spy = sinon.spy();
+		function App() {
+			useEffect(spy, []);
+			useLayoutEffect(spy, []);
+			return null;
+		}
+
+		act(() => {
+			render(<App />, scratch);
+		});
+
+		expect(spy.callCount).to.equal(0);
+
+		options._skipHooks = false;
 	});
 });
