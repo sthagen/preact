@@ -89,7 +89,11 @@ options.unmount = vnode => {
  * @returns {import('./internal').HookState}
  */
 function getHookState(index, type) {
-	if (options._hook) options._hook(currentComponent, index, type);
+	if (options._hook) {
+		options._hook(currentComponent, index, currentHook || type);
+	}
+	currentHook = 0;
+
 	// Largely inspired by:
 	// * https://github.com/michael-klein/funcy.js/blob/f6be73468e6ec46b0ff5aa3cc4c9baf72a29025a/src/hooks/core_hooks.mjs
 	// * https://github.com/michael-klein/funcy.js/blob/650beaa58c43c33a74820a3c98b3c7079cf2e333/src/renderer.mjs
@@ -124,8 +128,7 @@ export function useState(initialState) {
  */
 export function useReducer(reducer, initialState, init) {
 	/** @type {import('./internal').ReducerHookState} */
-	const hookState = getHookState(currentIndex++, currentHook || 2);
-	currentHook = 0;
+	const hookState = getHookState(currentIndex++, 2);
 	if (!hookState._component) {
 		hookState._component = currentComponent;
 
