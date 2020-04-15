@@ -2,7 +2,7 @@ import { EMPTY_OBJ, EMPTY_ARR } from '../constants';
 import { Component } from '../component';
 import { Fragment } from '../create-element';
 import { diffChildren } from './children';
-import { diffProps } from './props';
+import { diffProps, setProperty } from './props';
 import { assign, removeNode } from '../util';
 import options from '../options';
 
@@ -384,17 +384,17 @@ function diffElementNodes(
 		if (!isHydrating) {
 			if (
 				'value' in newProps &&
-				newProps.value !== undefined &&
-				newProps.value !== dom.value
+				(i = newProps.value) !== undefined &&
+				i !== dom.value
 			) {
-				dom.value = newProps.value == null ? '' : newProps.value;
+				setProperty(dom, 'value', i, oldProps.value, false);
 			}
 			if (
 				'checked' in newProps &&
-				newProps.checked !== undefined &&
-				newProps.checked !== dom.checked
+				(i = newProps.checked) !== undefined &&
+				i !== dom.checked
 			) {
-				dom.checked = newProps.checked;
+				setProperty(dom, 'checked', i, oldProps.checked, false);
 			}
 		}
 	}
