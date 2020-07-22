@@ -432,4 +432,29 @@ describe('forwardRef', () => {
 
 		expect(ref.current.innerHTML).to.equal('Wrapper');
 	});
+
+	// Issue #2566
+	it('should pass null as ref when no ref is present', () => {
+		let actual;
+		const App = forwardRef((_, ref) => {
+			actual = ref;
+			return <div />;
+		});
+
+		render(<App />, scratch);
+		expect(actual).to.equal(null);
+	});
+
+	// Issue #2599
+	it('should not crash when explicitly passing null', () => {
+		let actual;
+		const App = forwardRef((_, ref) => {
+			actual = ref;
+			return <div />;
+		});
+
+		// eslint-disable-next-line new-cap
+		render(App({}, null), scratch);
+		expect(actual).to.equal(null);
+	});
 });
