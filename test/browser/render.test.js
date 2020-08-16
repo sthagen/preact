@@ -370,6 +370,14 @@ describe('render()', () => {
 		expect(scratch.firstChild.spellcheck).to.equal(false);
 	});
 
+	it('should render download attribute', () => {
+		render(<a download="" />, scratch);
+		expect(scratch.firstChild.getAttribute('download')).to.equal('');
+
+		render(<a download={null} />, scratch);
+		expect(scratch.firstChild.getAttribute('download')).to.equal(null);
+	});
+
 	it('should not set tagName', () => {
 		expect(() => render(<input tagName="div" />, scratch)).not.to.throw();
 	});
@@ -447,6 +455,24 @@ describe('render()', () => {
 	it('should mask value on password input elements', () => {
 		render(<input value="xyz" type="password" />, scratch);
 		expect(scratch.innerHTML).to.equal('<input type="password">');
+	});
+
+	it('should unset href if null || undefined', () => {
+		render(
+			<pre>
+				<a href="#">href="#"</a>
+				<a href={undefined}>href="undefined"</a>
+				<a href={null}>href="null"</a>
+				<a href={''}>href="''"</a>
+			</pre>,
+			scratch
+		);
+
+		const links = scratch.querySelectorAll('a');
+		expect(links[0].hasAttribute('href')).to.equal(true);
+		expect(links[1].hasAttribute('href')).to.equal(false);
+		expect(links[2].hasAttribute('href')).to.equal(false);
+		expect(links[3].hasAttribute('href')).to.equal(true);
 	});
 
 	describe('dangerouslySetInnerHTML', () => {
