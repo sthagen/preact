@@ -94,6 +94,7 @@ declare namespace preact {
 		new (props: P, context?: any): Component<P, S>;
 		displayName?: string;
 		defaultProps?: Partial<P>;
+		contextType?: Context<any>;
 		getDerivedStateFromProps?(
 			props: Readonly<P>,
 			state: Readonly<S>
@@ -299,6 +300,7 @@ declare namespace preact {
 	interface Context<T> {
 		Consumer: Consumer<T>;
 		Provider: Provider<T>;
+		displayName?: string;
 	}
 	interface PreactContext<T> extends Context<T> {}
 

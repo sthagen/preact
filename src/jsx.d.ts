@@ -32,6 +32,23 @@ export namespace JSXInternal {
 		children: any;
 	}
 
+	type DOMCSSProperties = {
+		[key in keyof Omit<
+			CSSStyleDeclaration,
+			| 'item'
+			| 'setProperty'
+			| 'removeProperty'
+			| 'getPropertyValue'
+			| 'getPropertyPriority'
+		>]?: string | number | null | undefined;
+	};
+	type AllCSSProperties = {
+		[key: string]: string | number | null | undefined;
+	};
+	interface CSSProperties extends AllCSSProperties, DOMCSSProperties {
+		cssText?: string | null;
+	}
+
 	interface SVGAttributes<Target extends EventTarget = SVGElement>
 		extends HTMLAttributes<Target> {
 		accentHeight?: number | string;
@@ -694,6 +711,7 @@ export namespace JSXInternal {
 		poster?: string;
 		preload?: string;
 		radioGroup?: string;
+		readonly?: boolean;
 		readOnly?: boolean;
 		rel?: string;
 		required?: boolean;
@@ -719,7 +737,7 @@ export namespace JSXInternal {
 		srcSet?: string;
 		start?: number;
 		step?: number | string;
-		style?: string | { [key: string]: string | number };
+		style?: string | CSSProperties;
 		summary?: string;
 		tabIndex?: number;
 		target?: string;
@@ -886,6 +904,7 @@ export namespace JSXInternal {
 		svg: SVGAttributes<SVGSVGElement>;
 		animate: SVGAttributes<SVGAnimateElement>;
 		circle: SVGAttributes<SVGCircleElement>;
+		animateTransform: SVGAttributes<SVGAnimateElement>;
 		clipPath: SVGAttributes<SVGClipPathElement>;
 		defs: SVGAttributes<SVGDefsElement>;
 		desc: SVGAttributes<SVGDescElement>;

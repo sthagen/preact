@@ -8,7 +8,7 @@ import { getDomSibling } from '../component';
  * Diff the children of a virtual node
  * @param {import('../internal').PreactElement} parentDom The DOM element whose
  * children are being diffed
- * @param {import('../index').ComponentChildren[]} renderResult
+ * @param {import('../internal').ComponentChildren[]} renderResult
  * @param {import('../internal').VNode} newParentVNode The new virtual
  * node whose children should be diff'ed against oldParentVNode
  * @param {import('../internal').VNode} oldParentVNode The old virtual
@@ -18,7 +18,7 @@ import { getDomSibling } from '../component';
  * @param {Array<import('../internal').PreactElement>} excessDomChildren
  * @param {Array<import('../internal').Component>} commitQueue List of components
  * which have callbacks to invoke in commitRoot
- * @param {Node | Text} oldDom The current attached DOM
+ * @param {import('../internal').PreactElement} oldDom The current attached DOM
  * element any new dom elements should be placed around. Likely `null` on first
  * render (except when hydrating). Can be a sibling DOM element when diffing
  * Fragments that have siblings. In most cases, it starts out as `oldChildren[0]._dom`.
@@ -84,7 +84,11 @@ export function diffChildren(
 				null,
 				null
 			);
-		} else if (childVNode._dom != null || childVNode._component != null) {
+		} else if (childVNode._depth > 0) {
+			// VNode is already in use, clone it. This can happen in the following
+			// scenario:
+			//   const reuse = <div />
+			//   <div>{reuse}<span />{reuse}</div>
 			childVNode = newParentVNode._children[i] = createVNode(
 				childVNode.type,
 				childVNode.props,
@@ -140,7 +144,7 @@ export function diffChildren(
 		oldVNode = oldVNode || EMPTY_OBJ;
 
 		// Morph the old element into the new one, but don't append it to the dom yet
-		newDom = diff(
+		diff(
 			parentDom,
 			childVNode,
 			oldVNode,
@@ -151,6 +155,8 @@ export function diffChildren(
 			oldDom,
 			isHydrating
 		);
+
+		newDom = childVNode._dom;
 
 		if ((j = childVNode.ref) && oldVNode.ref != j) {
 			if (!refs) refs = [];
@@ -163,15 +169,26 @@ export function diffChildren(
 				firstChildDom = newDom;
 			}
 
-			oldDom = placeChild(
-				parentDom,
-				childVNode,
-				oldVNode,
-				oldChildren,
-				excessDomChildren,
-				newDom,
-				oldDom
-			);
+			if (
+				typeof childVNode.type == 'function' &&
+				childVNode._children === oldVNode._children
+			) {
+				childVNode._nextDom = oldDom = reorderChildren(
+					childVNode,
+					oldDom,
+					parentDom
+				);
+			} else {
+				oldDom = placeChild(
+					parentDom,
+					childVNode,
+					oldVNode,
+					oldChildren,
+					excessDomChildren,
+					newDom,
+					oldDom
+				);
+			}
 
 			// Browsers will infer an option's `value` from `textContent` when
 			// no value is present. This essentially bypasses our code to set it
@@ -183,7 +200,9 @@ export function diffChildren(
 			//
 			// To fix it we make sure to reset the inferred value, so that our own
 			// value check in `diff()` won't be skipped.
-			if (!isHydrating && newParentVNode.type == 'option') {
+			if (!isHydrating && newParentVNode.type === 'option') {
+				// @ts-ignore We have validated that the type of parentDOM is 'option'
+				// in the above check
 				parentDom.value = '';
 			} else if (typeof newParentVNode.type == 'function') {
 				// Because the newParentVNode is Fragment-like, we need to set it's
@@ -217,7 +236,20 @@ export function diffChildren(
 
 	// Remove remaining oldChildren if there are any.
 	for (i = oldChildrenLength; i--; ) {
-		if (oldChildren[i] != null) unmount(oldChildren[i], oldChildren[i]);
+		if (oldChildren[i] != null) {
+			if (
+				typeof newParentVNode.type == 'function' &&
+				oldChildren[i]._dom != null &&
+				oldChildren[i]._dom == newParentVNode._nextDom
+			) {
+				// If the newParentVNode.__nextDom points to a dom node that is about to
+				// be unmounted, then get the next sibling of that vnode and set
+				// _nextDom to it
+				newParentVNode._nextDom = getDomSibling(oldParentVNode, i + 1);
+			}
+
+			unmount(oldChildren[i], oldChildren[i]);
+		}
 	}
 
 	// Set refs only after unmount
@@ -226,6 +258,31 @@ export function diffChildren(
 			applyRef(refs[i], refs[++i], refs[++i]);
 		}
 	}
+}
+
+function reorderChildren(childVNode, oldDom, parentDom) {
+	for (let tmp = 0; tmp < childVNode._children.length; tmp++) {
+		let vnode = childVNode._children[tmp];
+		if (vnode) {
+			vnode._parent = childVNode;
+
+			if (typeof vnode.type == 'function') {
+				reorderChildren(vnode, oldDom, parentDom);
+			} else {
+				oldDom = placeChild(
+					parentDom,
+					vnode,
+					vnode,
+					childVNode._children,
+					null,
+					vnode._dom,
+					oldDom
+				);
+			}
+		}
+	}
+
+	return oldDom;
 }
 
 /**
@@ -247,7 +304,7 @@ export function toChildArray(children, out) {
 	return out;
 }
 
-export function placeChild(
+function placeChild(
 	parentDom,
 	childVNode,
 	oldVNode,
