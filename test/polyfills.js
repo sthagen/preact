@@ -13,6 +13,12 @@ import 'core-js/fn/string/from-code-point';
 import 'core-js/fn/string/repeat';
 import * as kl from 'kolorist';
 
+// Something that's loaded before this file polyfills Symbol object.
+// We need to verify that it works in IE without that.
+if (/Trident/.test(window.navigator.userAgent)) {
+	window.Symbol = undefined;
+}
+
 // Fix Function#name on browsers that do not support it (IE).
 // Taken from: https://stackoverflow.com/a/17056530/755391
 if (!function f() {}.name) {
@@ -74,7 +80,7 @@ function patchConsole(method) {
 	window.console[method] = (...args) => {
 		// @ts-ignore
 		// eslint-disable-next-line no-undef
-		__karma__.log(method, serializeConsoleArgs(args));
+		__karma__.log(method, ['__LOG_CUSTOM:' + serializeConsoleArgs(args)]);
 		original.apply(window.console, args);
 	};
 }
@@ -191,6 +197,10 @@ function serialize(value, mode, indent, seen) {
 			return kl.cyan(`[Function: ${value.name || 'anonymous'}]`);
 	}
 
+	if (value instanceof Element) {
+		return value.outerHTML;
+	}
+
 	seen.add(value);
 
 	const props = Object.keys(value).map(key => {
@@ -247,3 +257,4 @@ function serialize(value, mode, indent, seen) {
 // 	new Set([1, 2]),
 // 	new Map([[1, 2]])
 // );
+// console.log(document.createElement('div'));

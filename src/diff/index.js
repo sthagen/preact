@@ -300,26 +300,25 @@ function diffElementNodes(
 	commitQueue,
 	isHydrating
 ) {
-	let i;
 	let oldProps = oldVNode.props;
 	let newProps = newVNode.props;
+	let nodeType = newVNode.type;
+	let i = 0;
 
 	// Tracks entering and exiting SVG namespace when descending through the tree.
-	isSvg = newVNode.type === 'svg' || isSvg;
+	if (nodeType === 'svg') isSvg = true;
 
 	if (excessDomChildren != null) {
-		for (i = 0; i < excessDomChildren.length; i++) {
+		for (; i < excessDomChildren.length; i++) {
 			const child = excessDomChildren[i];
 
 			// if newVNode matches an element in excessDomChildren or the `dom`
 			// argument matches an element in excessDomChildren, remove it from
 			// excessDomChildren so it isn't later removed in diffChildren
 			if (
-				child != null &&
-				((newVNode.type === null
-					? child.nodeType === 3
-					: child.localName === newVNode.type) ||
-					dom == child)
+				child &&
+				(child === dom ||
+					(nodeType ? child.localName == nodeType : child.nodeType == 3))
 			) {
 				dom = child;
 				excessDomChildren[i] = null;
@@ -329,7 +328,7 @@ function diffElementNodes(
 	}
 
 	if (dom == null) {
-		if (newVNode.type === null) {
+		if (nodeType === null) {
 			// @ts-ignore createTextNode returns Text, we expect PreactElement
 			return document.createTextNode(newProps);
 		}
@@ -338,13 +337,13 @@ function diffElementNodes(
 			dom = document.createElementNS(
 				'http://www.w3.org/2000/svg',
 				// @ts-ignore We know `newVNode.type` is a string
-				newVNode.type
+				nodeType
 			);
 		} else {
 			dom = document.createElement(
 				// @ts-ignore We know `newVNode.type` is a string
-				newVNode.type,
-				newProps.is && { is: newProps.is }
+				nodeType,
+				newProps.is && newProps
 			);
 		}
 
@@ -354,15 +353,15 @@ function diffElementNodes(
 		isHydrating = false;
 	}
 
-	if (newVNode.type === null) {
+	if (nodeType === null) {
 		// During hydration, we still have to split merged text from SSR'd HTML.
 		if (oldProps !== newProps && (!isHydrating || dom.data !== newProps)) {
 			dom.data = newProps;
 		}
 	} else {
-		if (excessDomChildren != null) {
-			excessDomChildren = EMPTY_ARR.slice.call(dom.childNodes);
-		}
+		// If excessDomChildren was not null, repopulate it with the current element's children:
+		excessDomChildren =
+			excessDomChildren && EMPTY_ARR.slice.call(dom.childNodes);
 
 		oldProps = oldVNode.props || EMPTY_OBJ;
 
@@ -406,12 +405,19 @@ function diffElementNodes(
 				newVNode,
 				oldVNode,
 				globalContext,
-				newVNode.type === 'foreignObject' ? false : isSvg,
+				isSvg && nodeType !== 'foreignObject',
 				excessDomChildren,
 				commitQueue,
-				EMPTY_OBJ,
+				dom.firstChild,
 				isHydrating
 			);
+
+			// Remove children that are not part of any vnode.
+			if (excessDomChildren != null) {
+				for (i = excessDomChildren.length; i--; ) {
+					if (excessDomChildren[i] != null) removeNode(excessDomChildren[i]);
+				}
+			}
 		}
 
 		// (as above, don't diff props during hydration)
@@ -423,7 +429,7 @@ function diffElementNodes(
 				// despite the attribute not being present. When the attribute
 				// is missing the progress bar is treated as indeterminate.
 				// To fix that we'll always update it when it is 0 for progress elements
-				(i !== dom.value || (newVNode.type === 'progress' && !i))
+				(i !== dom.value || (nodeType === 'progress' && !i))
 			) {
 				setProperty(dom, 'value', i, oldProps.value, false);
 			}

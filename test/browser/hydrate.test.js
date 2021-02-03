@@ -193,7 +193,11 @@ describe('hydrate()', () => {
 		clearLog();
 		hydrate(vnode, scratch);
 
-		expect(attributesSpy.get).to.not.have.been.called;
+		// IE11 doesn't support spying on Element.prototype
+		if (!/Trident/.test(navigator.userAgent)) {
+			expect(attributesSpy.get).to.not.have.been.called;
+		}
+
 		expect(serializeHtml(scratch)).to.equal(
 			sortAttributes(
 				'<div><span before-hydrate="test" different-value="a" same-value="foo">Test</span></div>'
@@ -345,7 +349,10 @@ describe('hydrate()', () => {
 		);
 
 		hydrate(preactElement, scratch);
-		expect(attributesSpy.get).to.not.have.been.called;
+		// IE11 doesn't support spies on built-in prototypes
+		if (!/Trident/.test(navigator.userAgent)) {
+			expect(attributesSpy.get).to.not.have.been.called;
+		}
 		expect(scratch).to.have.property(
 			'innerHTML',
 			'<div><a foo="bar"></a></div>'
@@ -400,8 +407,10 @@ describe('hydrate()', () => {
 		};
 
 		hydrate(<App />, scratch);
-		expect(scratch.innerHTML).to.equal(
-			'<select><option value="0">Zero</option><option selected="" value="2">Two</option></select>'
+		expect(sortAttributes(scratch.innerHTML)).to.equal(
+			sortAttributes(
+				'<select><option value="0">Zero</option><option selected="" value="2">Two</option></select>'
+			)
 		);
 	});
 
@@ -435,5 +444,11 @@ describe('hydrate()', () => {
 		expect(element.innerHTML).to.equal(
 			'<p class="hi">hello baz</p><p class="hi">hello bar</p>'
 		);
+	});
+
+	it('should skip comment nodes', () => {
+		scratch.innerHTML = '<p>hello <!-- c -->foo</p>';
+		hydrate(<p>hello {'foo'}</p>, scratch);
+		expect(scratch.innerHTML).to.equal('<p>hello foo</p>');
 	});
 });

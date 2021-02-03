@@ -3,9 +3,7 @@
 var coverage = String(process.env.COVERAGE) === 'true',
 	minify = String(process.env.MINIFY) === 'true',
 	ci = String(process.env.CI).match(/^(1|true)$/gi),
-	pullRequest = String(process.env.GITHUB_EVENT_NAME) === 'pull_request',
-	masterBranch = String(process.env.GITHUB_WORKFLOW) === 'CI-master',
-	sauceLabs = ci && !pullRequest && masterBranch,
+	sauceLabs = ci && String(process.env.RUN_SAUCE_LABS) === 'true',
 	performance = !coverage && String(process.env.PERFORMANCE) !== 'false',
 	path = require('path'),
 	errorstacks = require('errorstacks'),
@@ -18,7 +16,9 @@ const fs = require('fs').promises;
 const orgStdoutWrite = process.stdout.write;
 process.stdout.write = msg => {
 	let out = '';
-	const match = msg.match(/(^|.*\s)(LOG|WARN|ERROR):\s'([\s\S]*)'/);
+	const match = msg.match(
+		/(^|.*\s)(LOG|WARN|ERROR):\s'__LOG_CUSTOM:([\S\s]*)'/
+	);
 	if (match && match.length >= 4) {
 		// Sometimes the UA of the browser will be included in the message
 		if (match[1].length) {
@@ -31,6 +31,8 @@ process.stdout.write = msg => {
 			out += match[3];
 		}
 		out += '\n';
+	} else if (/(^|.*\s)(LOG|WARN|ERROR):\s([\S\s]*)/.test(msg)) {
+		// Nothing
 	} else {
 		out = msg;
 	}
@@ -140,6 +142,14 @@ function createEsbuildPlugin() {
 				};
 			});
 
+			build.onResolve({ filter: /^(react|react-dom)$/ }, args => {
+				const pkg = alias['preact/compat'];
+				return {
+					path: pkg,
+					namespace: 'preact'
+				};
+			});
+
 			// Apply babel pass whenever we load a .js file
 			build.onLoad({ filter: /\.js$/ }, async args => {
 				const contents = await fs.readFile(args.path, 'utf-8');
@@ -164,6 +174,7 @@ function createEsbuildPlugin() {
 
 					const tmp = await babel.transformAsync(result, {
 						filename: args.path,
+						sourceMaps: 'inline',
 						plugins: [
 							coverage && [
 								'istanbul',
@@ -217,7 +228,9 @@ module.exports = function(config) {
 			if (!frames.length || frames[0].column === -1) return '\n' + msg + '\n';
 
 			const frame = frames[0];
-			const filePath = kl.lightCyan(frame.fileName.replace('webpack:///', ''));
+			const filePath = kl.lightCyan(
+				frame.fileName.replace(__dirname + '/', '')
+			);
 
 			const indentMatch = msg.match(/^(\s*)/);
 			const indent = indentMatch ? indentMatch[1] : '  ';
@@ -265,7 +278,7 @@ module.exports = function(config) {
 			{
 				pattern:
 					config.grep ||
-					'{debug,hooks,compat,test-utils,jsx-runtime,}/test/{browser,shared}/**/*.test.js',
+					'{debug,devtools,hooks,compat,test-utils,jsx-runtime,}/test/{browser,shared}/**/*.test.js',
 				watched: false,
 				type: 'js'
 			}
@@ -276,13 +289,14 @@ module.exports = function(config) {
 		},
 
 		preprocessors: {
-			'{debug,hooks,compat,test-utils,jsx-runtime,}/test/**/*': [
+			'{debug,devtools,hooks,compat,test-utils,jsx-runtime,}/test/**/*': [
 				'esbuild',
 				'sourcemap'
 			]
 		},
 
 		esbuild: {
+			target: 'es5',
 			define: {
 				COVERAGE: coverage,
 				'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || ''),
